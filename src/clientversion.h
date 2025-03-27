@@ -14,10 +14,10 @@
  */
 
 //! These need to be macros, as clientversion.cpp's and bitcoin*-res.rc's voodoo requires it
-#define CLIENT_VERSION_MAJOR 0
-#define CLIENT_VERSION_MINOR 14
-#define CLIENT_VERSION_REVISION 2
-#define CLIENT_VERSION_BUILD 0
+#define CLIENT_VERSION_MAJOR 2
+#define CLIENT_VERSION_MINOR 0
+#define CLIENT_VERSION_REVISION 0
+#define CLIENT_VERSION_BUILD 1
 
 //! Set to true for release, false for prerelease or test build
 #define CLIENT_VERSION_IS_RELEASE true
@@ -63,6 +63,13 @@ extern const std::string CLIENT_BUILD;
 
 std::string FormatFullVersion();
 std::string FormatSubVersion(const std::string& name, int nClientVersion, const std::vector<std::string>& comments);
+
+// The following client version string is displayed in various places
+#define CLIENT_VERSION_STRING \
+    STRINGIZE(CLIENT_VERSION_MAJOR) "." \
+    STRINGIZE(CLIENT_VERSION_MINOR) "." \
+    STRINGIZE(CLIENT_VERSION_REVISION) "." \
+    STRINGIZE(CLIENT_VERSION_BUILD)
 
 #endif // WINDRES_PREPROC
 

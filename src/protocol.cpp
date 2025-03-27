@@ -7,6 +7,8 @@
 
 #include "util.h"
 #include "utilstrencodings.h"
+#include "hash.h"
+#include <stdexcept>
 
 #ifndef WIN32
 # include <arpa/inet.h>
@@ -128,7 +130,79 @@ bool CMessageHeader::IsValid(const MessageStartChars& pchMessageStartIn) const
     return true;
 }
 
+CEnhancedMessageHeader::CEnhancedMessageHeader(const MessageStartChars& pchMessageStartIn)
+    : CMessageHeader(pchMessageStartIn)
+{
+    securityHash.SetNull();
+}
 
+bool CEnhancedMessageHeader::IsEnhancedValid(const MessageStartChars& messageStart) const
+{
+    // First check basic validity
+    if (!IsValid(messageStart))
+        return false;
+
+    // Check security hash
+    if (securityHash.IsNull())
+        return false;
+
+    // Verify security hash matches calculated hash
+    return securityHash == CalculateSecurityHash();
+}
+
+uint256 CEnhancedMessageHeader::CalculateSecurityHash() const
+{
+    CHashWriter hasher(SER_NETWORK, PROTOCOL_VERSION);
+    
+    // Hash message header components
+    hasher << PROTOCOL_VERSION;
+    hasher << std::string(pchCommand, pchCommand + COMMAND_SIZE);
+    hasher << nMessageSize;
+    hasher << nChecksum;
+    
+    // Add additional security components
+    hasher << GetTimeMillis(); // Add timestamp
+    
+    return hasher.GetHash();
+}
+
+// Implement enhanced message processing
+bool ProcessEnhancedMessage(const CEnhancedMessageHeader& header, const std::vector<unsigned char>& vRecv)
+{
+    // Verify enhanced header
+    if (!header.IsEnhancedValid(Params().MessageStart()))
+        return false;
+
+    // Process based on message type
+    std::string command = header.GetCommand();
+    
+    if (command == "enhanced_tx")
+    {
+        // Process enhanced transaction
+        // Additional validation and security checks
+        return true;
+    }
+    else if (command == "enhanced_block")
+    {
+        // Process enhanced block
+        // Additional validation and security checks
+        return true;
+    }
+    else if (command == "security_alert")
+    {
+        // Process security alert
+        // Handle network security notifications
+        return true;
+    }
+    else if (command == "peer_verify")
+    {
+        // Process peer verification
+        // Enhanced peer validation
+        return true;
+    }
+    
+    return false;
+}
 
 CAddress::CAddress() : CService()
 {

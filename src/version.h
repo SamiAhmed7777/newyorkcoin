@@ -11,7 +11,7 @@
 
 // XXX: Decide if this is appropriate - if we reintroduce alerts we may need
 //      to  reduce to 70012
-static const int PROTOCOL_VERSION = 70012;
+static const int PROTOCOL_VERSION = 70015;
 
 //! initial proto version, to be increased after version/verack negotiation
 static const int INIT_PROTO_VERSION = 209;
@@ -20,7 +20,7 @@ static const int INIT_PROTO_VERSION = 209;
 static const int GETHEADERS_VERSION = 31800;
 
 //! disconnect from peers older than this proto version
-static const int MIN_PEER_PROTO_VERSION = 70005;
+static const int MIN_PEER_PROTO_VERSION = 70002;
 
 //! nTime field added to CAddress, starting with this version;
 //! if possible, avoid requesting addresses nodes older than this
@@ -46,5 +46,31 @@ static const int SHORT_IDS_BLOCKS_VERSION = 70012;
 
 //! not banning for invalid compact blocks starts with this version
 static const int INVALID_CB_NO_BAN_VERSION = 70012;
+
+static const std::string CLIENT_NAME("NewYorkCoin");
+static const std::string CLIENT_BUILD("2.0.0.1");
+static const std::string CLIENT_DATE("2024-01");
+
+static std::string FormatUserAgent()
+{
+    std::string uaComment;
+    if (gArgs.IsArgSet("-uacomment")) {
+        uaComment = gArgs.GetArg("-uacomment", "");
+        if (uaComment.size() > 0) {
+            uaComment = "/" + uaComment;
+        }
+    }
+    return CLIENT_NAME + ":" + CLIENT_VERSION_STRING + uaComment;
+}
+
+// This ensures backwards compatibility while allowing version identification
+static std::string FormatSubVersion()
+{
+    std::string ua = FormatUserAgent();
+    if (ua.size() > MAX_SUBVERSION_LENGTH) {
+        ua = ua.substr(0, MAX_SUBVERSION_LENGTH);
+    }
+    return "/" + ua + "/";
+}
 
 #endif // BITCOIN_VERSION_H

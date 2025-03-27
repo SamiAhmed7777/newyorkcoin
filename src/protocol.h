@@ -18,6 +18,15 @@
 #include <stdint.h>
 #include <string>
 
+/** Version after which BIP65 is enforced */
+static const int BIP65_VERSION = 70015;
+
+/** Version after which BIP66 is enforced */
+static const int BIP66_VERSION = 70015;
+
+/** Version after which BIP147 is enforced */
+static const int BIP147_VERSION = 70015;
+
 /** Message header.
  * (4) message start.
  * (12) command.
@@ -274,14 +283,15 @@ enum ServiceFlags : uint64_t {
     // NODE_XTHIN means the node supports Xtreme Thinblocks
     // If this is turned off then the node will not service nor make xthin requests
     NODE_XTHIN = (1 << 4),
-
-    // Bits 24-31 are reserved for temporary experiments. Just pick a bit that
-    // isn't getting used, or one not being used much, and notify the
-    // bitcoin-development mailing list. Remember that service bits are just
-    // unauthenticated advertisements, so your code must be robust against
-    // collisions and other cases where nodes may be advertising a service they
-    // do not actually support. Other service bits should be allocated via the
-    // BIP process.
+    // Node supports compact blocks
+    NODE_COMPACT_FILTERS = (1 << 6),
+    // Node supports enhanced validation
+    NODE_ENHANCED_VALIDATION = (1 << 7),
+    // Node supports enhanced network security
+    NODE_ENHANCED_SECURITY = (1 << 8),
+    // All currently supported features
+    NODE_ALL_FEATURES = NODE_NETWORK | NODE_WITNESS | NODE_COMPACT_FILTERS | 
+                       NODE_ENHANCED_VALIDATION | NODE_ENHANCED_SECURITY
 };
 
 /** A CService with information about it as peer */
@@ -366,6 +376,26 @@ public:
 public:
     int type;
     uint256 hash;
+};
+
+/** Enhanced message types */
+enum MessageTypes : uint32_t {
+    MSG_ENHANCED_TX = 5,        // Enhanced transaction message
+    MSG_ENHANCED_BLOCK = 6,     // Enhanced block message
+    MSG_SECURITY_ALERT = 7,     // Security alert message
+    MSG_PEER_VERIFICATION = 8   // Peer verification message
+};
+
+/** Enhanced message header with additional security features */
+class CEnhancedMessageHeader : public CMessageHeader
+{
+public:
+    static const size_t ENHANCED_HEADER_SIZE = HEADER_SIZE + 32; // Additional 32 bytes for security
+    uint256 securityHash;  // Additional security hash
+
+    CEnhancedMessageHeader(const MessageStartChars& pchMessageStartIn);
+    bool IsEnhancedValid(const MessageStartChars& messageStart) const;
+    uint256 CalculateSecurityHash() const;
 };
 
 #endif // BITCOIN_PROTOCOL_H
