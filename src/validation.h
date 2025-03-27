@@ -17,6 +17,7 @@
 #include "script/script_error.h"
 #include "sync.h"
 #include "versionbits.h"
+#include "utxo_snapshot.h"
 
 #include <algorithm>
 #include <exception>
@@ -32,6 +33,14 @@
 #include <boost/unordered_map.hpp>
 #include <boost/filesystem/path.hpp>
 
+#include <list>
+#include "primitives/transaction.h"  // for CTransactionRef
+
+#include <array>
+#include <unordered_set>
+
+#include "net.h"  // for NodeId
+
 class CBlockIndex;
 class CBlockTreeDB;
 class CBloomFilter;
@@ -46,6 +55,78 @@ struct ChainTxData;
 
 struct PrecomputedTransactionData;
 struct LockPoints;
+
+// Add hash function for uint256
+namespace std {
+    template<>
+    struct hash<uint256> {
+        size_t operator()(const uint256& hash) const {
+            return hash.GetCheapHash();
+        }
+    };
+}
+
+/** Enhanced Fast Sync Configuration */
+struct FastSyncOptions {
+    bool useCheckpoints;
+    bool useAssumeValid;
+    bool useUTXOSnapshots;
+    bool useHeadersFirstSync;
+    bool useParallelBlockValidation;  // New: Enable parallel validation
+    bool useCompactBlocks;            // New: Enable compact block relay
+    bool useEnhancedMempool;          // Enable improved mempool handling
+    bool useImprovedUTXOCache;        // Enable UTXO cache optimizations
+    int64_t assumeValidTime;
+    uint32_t parallelValidationThreads;  // New: Number of validation threads
+    uint32_t maxParallelBlocks;          // New: Max blocks to validate in parallel
+    uint32_t utxoSnapshotInterval;       // New: Snapshot creation interval
+    uint32_t utxoSnapshotRetention;      // New: How many snapshots to keep
+    uint32_t utxoCacheSize;               // MB of memory for UTXO cache
+    
+    // Add new compatibility settings
+    struct CompatibilityMode {
+        bool enforceSegWit{false};
+        bool enforceCSV{false}; // Check Sequence Verify
+        bool enforceBIP65{false}; // OP_CHECKLOCKTIMEVERIFY
+        bool enforceNewDifficultyAdjustment{false};
+        int activationHeight{0};
+    } compatibility;
+    
+    // Add version activation heights
+    struct {
+        int32_t segwitHeight{-1};
+        int32_t csvHeight{-1}; 
+        int32_t bip65Height{-1};
+        int32_t diffAdjustHeight{-1};
+    } activationHeights;
+
+    bool useParallelValidation{false};  // Optional performance improvement
+    size_t maxMemPoolSize{350};  // MB
+    bool useEnhancedNetworking{false};
+};
+
+/** UTXO Cache Optimization */
+struct UTXOCacheConfig {
+    bool dynamicMemory;              // Enable dynamic memory allocation
+    size_t initialSize;              // Initial cache size
+    size_t maxSize;                  // Maximum cache size
+    float targetHitRate;             // Target cache hit rate
+    uint32_t flushInterval;          // How often to flush to disk
+    bool predictiveLoading;          // Enable predictive UTXO loading
+};
+
+/** Memory Pool Optimization */
+struct MemPoolConfig {
+    size_t maxMemPoolSize;           // Maximum mempool size in MB
+    size_t maxMemPoolExpiry;         // Maximum time to keep txs in mempool
+    bool limitAncestors;             // Limit transaction ancestors
+    uint32_t maxAncestors;           // Maximum number of ancestors
+    bool incrementalRelay;           // Enable incremental relay
+    bool replaceByFee;              // Enable replace-by-fee
+};
+
+extern FastSyncOptions fastSyncOptions;
+extern std::unique_ptr<UTXOSnapshot> utxoSnapshot;
 
 /** Default for accepting alerts from the P2P network. */
 static const bool DEFAULT_ALERTS = true;
@@ -483,7 +564,7 @@ bool ReadBlockHeaderFromDisk(CBlockHeader& block, const CBlockIndex* pindex, con
 /** Functions for validating blocks and updating the block tree */
 
 /** Context-independent validity checks */
-bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, bool fCheckPOW = true);
+bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true);
 bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW = true, bool fCheckMerkleRoot = true);
 
 /** Context-dependent validity checks.
@@ -582,5 +663,41 @@ void DumpMempool();
 
 /** Load the mempool from disk. */
 bool LoadMempool();
+
+/** Initialize fast sync system */
+bool InitializeFastSync();
+
+/** Try to use fast sync methods during IBD */
+bool TryFastSync(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindex);
+
+/** Create UTXO snapshot if needed */
+void MaybeCreateUTXOSnapshot(const CCoinsViewCache& view, const CBlockIndex* pindex);
+
+/** Add a block to the block index */
+CBlockIndex* AddToBlockIndex(const CBlockHeader& block);
+
+/** Look up a block index by hash */
+CBlockIndex* LookupBlockIndex(const uint256& hash);
+
+/** Initialize parallel validation system */
+bool InitParallelValidation();
+
+/** Initialize enhanced UTXO cache */
+bool InitEnhancedUTXOCache();
+
+/** Initialize enhanced networking */
+bool InitEnhancedNetworking();
+
+/** Signal bad behavior from a peer */
+void Misbehaving(NodeId pnode, int howmuch, const std::string& message = "");
+
+// Add new validation function declarations
+bool ValidateBlockByVersion(const CBlock& block, CValidationState& state, 
+                          const CBlockIndex* pindexPrev,
+                          const Consensus::Params& consensusParams,
+                          bool fCheckPOW = true);
+
+bool IsCompatibleBlock(const CBlock& block, const CBlockIndex* pindexPrev,
+                      const Consensus::Params& consensusParams);
 
 #endif // BITCOIN_VALIDATION_H

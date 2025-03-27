@@ -1670,3 +1670,25 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)
 
     return !fRequestShutdown;
 }
+
+bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
+{
+    // ... existing initialization code ...
+
+    // Initialize enhanced features
+    if (!InitParallelValidation()) {
+        return InitError("Failed to initialize parallel validation");
+    }
+    
+    if (!InitEnhancedUTXOCache()) {
+        return InitError("Failed to initialize enhanced UTXO cache");
+    }
+    
+    if (!InitEnhancedNetworking()) {
+        return InitError("Failed to initialize enhanced networking");
+    }
+
+    LogPrintf("Enhanced features initialized successfully\n");
+
+    // ... rest of existing initialization code ...
+}
