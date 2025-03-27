@@ -98,6 +98,7 @@ BITCOIN_TESTS =\
   test/cuckoocache_tests.cpp \
   test/DoS_tests.cpp \
   test/newyorkcoin_tests.cpp \
+  test/newyorkcoin_enhancements_tests.cpp \
   test/getarg_tests.cpp \
   test/hash_tests.cpp \
   test/key_tests.cpp \
@@ -230,3 +231,7 @@ endif
 	 echo "};"; \
 	} > "$@.new" && mv -f "$@.new" "$@"
 	@echo "Generated $@"
+
+TEST_FILES = \
+  test/newyorkcoin_enhancements_tests.cpp \
+  // ... existing test files ...
