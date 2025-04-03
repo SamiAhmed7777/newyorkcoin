@@ -1,4 +1,4 @@
-NewYorkCoin Core 0.14.2
+NewYorkCoin Core 2.0.0
 =====================
 
 Setup
